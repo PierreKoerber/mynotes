@@ -1,0 +1,13 @@
+ 1465  echo "hello" > file.txt | espeak -f file.txt
+ 1466  echo "hello" > file.txt | espeak -f file.txt -v fr
+ 1467  echo "bonjour" > file.txt | espeak -f file.txt -v fr
+ 1468  echo "bonjour monsieur" > file.txt | espeak -f file.txt -v fr
+ 1469  echo "bonjour monsieur" > file.txt | espeak -f file.txt -v mb/mb-fr4
+ 1470  echo "bonjour" > file.txt | espeak -f file.txt -v fr
+ 1471  echo "bonjour monsieur" > file.txt | espeak -f file.txt -v mb/mb-fr4
+ 1472  echo "bonjour monsieur" > file.txt | espeak -f fige.txt -v mb/mb-fr4
+ 1473  echo "bonjour monsieur" > file.txt | espeak -f file.txt -v mb/mb-fr4
+ 1474  echo "bonjour" > file.txt | espeak -f file.txt -v fr
+ 1475  echo "bonjour" > file.txt | espeak -f file.txt -v g
+ 1476  echo "bonjour" > file.txt | espeak -f file.txt -v de
+ 1477  echo "guten tag" > file.txt | espeak -f file.txt -v de
