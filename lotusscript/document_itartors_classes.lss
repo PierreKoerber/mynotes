@@ -1,0 +1,403 @@
+%REM
+      Library eca.app.doc
+      Created Nov 22, 2018 by Admin ECA/ECA-Vaud
+      Description: Comments for Library
+%END REM
+Option Public
+Option Declare
+
+Class myApp 
+
+      Private db As notesdatabase
+      Private se As NotesSession
+      Private doc As NotesDocument
+      
+      Sub New()
+            Set se = New NotesSession
+            Set db = se.currentdatabase  
+                  
+      End Sub
+      
+      Public Function logMessage(sTxt As string)
+            
+            me.log(sTxt)
+            
+      End Function
+      
+      Public Function logSpacer()
+            me.log("-------------------------------------") 
+      End Function
+      
+      Public Function log(sTxt As string)
+            Print sTxt 
+      End Function
+      
+      Public Function logErrorExt(sMsg As string, doc As variant)
+            me.log(sMsg)      
+      End Function
+      Public Function logMessageExt(sMsg As String, doc As Variant)
+            me.log(sMsg)      
+      End Function 
+      
+      Public Function getDocumentByUnid(sUnid As string) As NotesDocument
+            Set me.doc = me.db.GetDocumentByUNID(sUnid)
+            Set getDocumentByUnid = me.doc
+      End Function
+
+      
+End Class
+
+
+Class myDoc 
+      Private app As myApp
+      Private sDir As String
+      Private doc As NotesDocument
+      
+      Sub New(pdoc As NotesDocument, papp As myapp)
+            Set doc = pdoc
+      End Sub
+      
+      Public Function setDirectory(psDir As String) As Integer
+            me.sDir = psDir   
+      End Function
+      
+      Public Function getDirectory() As String
+            getDirectory = me.sDir + "\" + me.getFolder() + "\ARCHIVES"
+      End Function
+      
+       Public Function getFullFileName() As String
+            getFullFileName = me.getDirectory() + "\" + getFileName() + ".pdf"
+      End Function
+      
+      Public Function getFileName() As String
+            'nom:= Form + " de la séance du " + d + @If(CalledBy!=""; "-";"") + CalledBy ;
+           Dim sFile As String
+            sFile = doc.Form(0) + " de la séance du "
+            sFile = sFile + me.getYear() + "-" + me.getMonth() + "-" + me.getDay()
+            If doc.CalledBy(0) <> "" Then
+                  sFile = sFile + "-" + doc.CalledBy(0)
+            End If
+            getFileName = sFile
+      End Function
+      
+      Public Function getYear() As String
+      '     getYear = Mid(me.getDateFromNum(),1,4)
+            getYear = CStr( Year(me.getDate() ) )
+      End Function
+      Public Function getMonth() As String
+      '     getMonth = CStr(CInt(Mid(me.getDateFromNum(),5,2)))
+            Dim i As Integer
+            i = Month(me.getDate() )
+            If i < 10 Then
+                  getMonth = "0" + CStr( Month(me.getDate()) )
+            Else
+                  getMonth = CStr(Month(me.getDate() ))    
+            End If      
+      End Function
+      Public Function getDay() As String
+            Dim i As Integer
+            i = Day(me.getDate() )
+            If i < 10 Then
+                  getDay = "0" + CStr(  Day(me.getDate() )  )
+            Else
+                  getDay = CStr( Day(me.getDate() ) )
+            End If
+      
+      End Function
+      
+      Public Function getDate() As variant
+            Dim d As NotesItem
+            Dim mydate As variant
+            Set d = doc.getFirstitem("PV_DT_SEANCE")
+            getDate = CDat(d.DateTimeValue.dateonly) 
+      End Function
+      
+      Public Function checkFile() As Integer
+           Dim h As New helper
+            checkFile = h.isExisting(me.getFullFileName() ) 
+       End Function
+      
+      Function getFolder() As string
+            Dim sDesc As String
+            sDesc  = doc.PV_LI_OBJET(0)
+            sDesc = Replace(sDesc,"agences","Agences")
+            sDesc = Replace(sDesc,"réseau","Réseau")
+            sDesc = Replace(sDesc,"estimateurs","Estimateurs")
+            sDesc = Replace(sDesc,"Divicom","DiviCom" )
+            getFolder = sDesc
+            Exit Function
+            
+errorHandler:
+            
+            Dim sMsg As String
+            sMsg =   Error + "-" +Cstr(Err()) & " at line number " & Erl() &  " " & LSI_Info(12) & " " & LSI_Info(2)
+            MsgBox sMsg
+            
+            
+      End Function
+      
+End Class
+Class helper
+      
+      Private dirSeparator As String
+      
+      Sub New
+            me.dirSeparator = "\"        
+      End Sub
+      
+      Public Function setDirSep(sdir)
+            me.dirSeparator = sdir
+      End Function
+      
+      Public Function getFileName(sDir As String, sfile As String) As String
+            Dim lastChar As String
+            lastChar  = Mid(sdir, Len(sdir),1)
+            If lastChar = me.dirSeparator Then
+                  getFileName = sDir + sfile
+            Else
+                  getFileName = sDir + me.dirSeparator + sfile 
+            End If
+      End Function
+      
+      Public Function getAppTempDirectory() As String
+            
+            Dim sDir As String
+            
+            'sDir = Replace(app.db.title, " ", "_")
+            'sDir = getTempDirectory() + sDir
+            If me.isExisting(sDir) = False Then
+                  MkDir sDir
+            End If
+            
+            getAppTempDirectory = sDir
+      End Function
+      
+      Public Function isExisting(sDir As String) As Integer
+            On Error GoTo errorHandler
+            On Error 76 GoTo parentDoesNotExist
+            If Dir$(sDir, 16) = "" Then
+                  isExisting = False
+            Else
+                  isExisting = True
+            End If
+            Exit Function
+parentDoesNotExist:
+            isExisting = False
+            Exit Function
+      errorHandler:
+            Dim sMsg As String
+            sMsg =   Error + "-" +Cstr(Err()) & " at line number " & Erl() &  " " & LSI_Info(12) & " " & LSI_Info(2)   
+            Print sMsg  
+      End Function
+      
+      Function displayDirectory(sDir As String) 
+            Dim x As Integer  
+            x=Shell("explorer.exe " + sDir,1)
+      End Function
+      
+      
+      Function MakeDir(ByVal strDir$)
+            
+            If me.isExisting(strDir$) = True Then Exit Function
+            
+            Dim stack$ ' the list of directories we need to create
+            Dim parts, i%, ptr%
+            
+            strDir = Replace(strDir, "\", "/") ' / works on all OS and simplifies our code.
+            strDir = Replace(strDir, "//", "/")
+            If Right$(strDir, 1) = "/" Then strDir = StrLeftBack(strDir, "/")
+            On Error 76 GoTo parentDoesNotExist
+      
+            
+            MkDir strDir
+            ' if we got here, it worked.
+            Exit Function
+            
+parentDoesNotExist: ' failed because parent directory doesn't exist. Build an array of directories to attempt.
+            Resume theLoop
+            
+theLoop:
+            parts = Split(strDir, "/")
+            For i = 1 To UBound(parts)
+                  parts(i) = parts(i-1) & "/" & parts(i)
+            Next
+            ptr = UBound(parts) - 1 ' ptr is index of directory to try to create.
+            On Error 76 GoTo backup
+tryAnother:
+            MkDir parts(ptr)
+            ' if we get here the create succeeded, and we only have to go forward in the list.
+            On Error GoTo 0
+            For i = ptr+1 To UBound(parts)
+                  MkDir parts(i)
+            Next
+            Exit Function
+            
+backup:
+            ptr = ptr - 1
+            If ptr >= 0 Then
+                  If parts(ptr) = "" Then GoTo backup
+                  Resume tryAnother
+            End If
+            Error Err, Error ' ran out of higher level directories to try.
+            
+      
+      End Function
+      
+      
+End Class
+Class viewIterator
+      
+      Private db As NotesDatabase
+      Private view As NotesView
+      Private app As myApp
+      Private doc As NotesDocument
+      Private lCount As Long
+            
+      Sub New(papp As myApp)
+            Set app = papp 
+            Call me.setDatabase(papp.db)
+            
+      End Sub
+      
+      Public Function setView(sView As String) As Integer
+            Set view = db.GetView(sView)
+      End Function
+      
+      Public Function setDatabase(pdb As NotesDatabase) As Integer
+            Set me.db = pdb
+      End Function
+      
+      Public Function run() As Integer
+            On Error GoTo errorHandler
+            
+            Call app.logMessage("START iteration " + me.view.Name)
+            Call app.logSpacer()
+            
+            Set doc = view.GetFirstDocument
+            me.lCount = 0     
+            While Not doc Is Nothing
+                  Call me.treateDocument(doc)
+                  Set doc = view.GetNextDocument(doc)
+                  me.lCount = me.lCount + 1
+            Wend
+            Call app.logSpacer()
+            Call app.logMessage("End " + CStr(me.lCount) + " doc(s) itérés") 
+            Exit Function
+            
+errorHandler:
+            Dim sMsg As String
+            sMsg =   Error + "-" +Cstr(Err()) & " at line number " & Erl() &  " " & LSI_Info(12) & " " & LSI_Info(2)
+            
+            Call app.logErrorExt(sMsg, doc)
+            Resume Next 
+      End Function
+      
+      
+      Public Function treateDocument(doc As NotesDocument) As Integer
+            Call app.logMessageExt(doc.Universalid, doc)   
+      End Function
+      
+End Class
+%REM
+      Class checkPdfFile
+      Description: Comments for Class
+%END REM
+Class iteratorCheckPdfFile As viewIterator
+      
+      Sub New(papp As myApp)
+                        
+            Call me.setView("ExportSeances")
+      End Sub
+      
+      Public Function treateDocument(doc As NotesDocument) As Integer
+            Dim pv As myDoc
+            Set pv = New myDoc(doc,app)
+            pv.setDirectory("D:\SHARE\Seance_DASS")
+                        
+            If pv.checkFile() = True Then
+            '     Print "Exists > " + pv.getFullFileName()
+            else
+                  Print "don't exist " + pv.getFullFileName()
+            End If
+                  
+      End Function
+      
+End Class
+Sub Initialize
+      
+End Sub
+
+
+
+
+
+%REM
+      Function test
+      Description: Comments for Function
+%END REM
+Function test
+      
+      Dim app As New myApp
+      Dim it As New viewIterator(app)
+      
+      
+      Call it.setView("ExportSeances")
+      Call it.run()
+      
+      
+      
+      
+      
+End Function
+
+
+%REM
+      Function testdoc
+      Description: Comments for Function
+%END REM
+Function testdoc()
+      
+      Dim doc As NotesDocument
+      Dim pv As myDoc
+      Dim app As New myApp
+      
+      Set doc = app.getDocumentByUnid("51C6D1DA547E4E28C1257522002BBE40")
+      
+      
+      
+      Set pv = New myDoc(doc,app)
+      
+      pv.setDirectory("D:\SHARE\Seance_DASS")
+
+      Print pv.getYear() + " " + pv.getMonth() 
+      Print pv.getFullFileName() 
+      
+      
+      If pv.checkFile() = True then
+            Print "exists"
+      Else
+            Print "don't exist"
+      End if
+            
+End Function
+
+
+%REM
+      Function checkAllPdf
+      Description: Comments for Function
+%END REM
+Function checkAllPdf()
+      
+      Dim app As New myApp
+      
+      Dim it As New iteratorCheckPdfFile(app)
+      
+      
+      
+      Call it.run()
+      
+      
+      
+      
+            
+End Function
